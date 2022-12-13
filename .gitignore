@@ -9,3 +9,6 @@ out/
 
 # Dotenv file
 .env
+dist
+node_modules
+yarn-error.log
