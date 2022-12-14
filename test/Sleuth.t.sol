@@ -19,4 +19,11 @@ contract SleuthTest is Test {
         assertEq(x, 55);
         assertEq(y, "hello");
     }
+
+    function testYul() public {
+        Sleuth sleuth = new Sleuth();
+        bytes memory yul = vm.getCode("Fun.yul:Query");
+        (bool r) = abi.decode(sleuth.query(yul), (bool));
+        assertEq(r, false);
+    }
 }

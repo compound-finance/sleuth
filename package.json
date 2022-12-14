@@ -1,5 +1,5 @@
 {
-  "name": "sleuth",
+  "name": "@compound-finance/sleuth",
   "version": "1.0.0",
   "main": "dist/index.js",
   "repository": "https://github.com/compound-finance/sleuth",
@@ -9,9 +9,11 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@swc/core": "^1.3.22",
+    "@swc/jest": "^0.2.24",
     "@types/jest": "^29.2.4",
     "jest": "^29.3.1",
-    "ts-jest": "^29.0.3",
+    "ts-node": "^10.9.1",
     "typescript": "^4.9.4"
   },
   "dependencies": {

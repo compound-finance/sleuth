@@ -1,0 +1,51 @@
+
+main = {
+  SOI
+  ~ query+
+  ~ EOI
+}
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+select_kw = _{ ^"SELECT" }
+from_kw = _{ ^"FROM" }
+ch_semi = _{ ";" }
+ch_dot = _{ "." }
+wildcard = { "*" }
+
+string = { ( "\"" ~ !"\""* ~ "\"" ) | ( "'" ~ !"'"* ~ "'" ) }
+number = { ASCII_DIGIT+ }
+keyword = { XID_START ~ ASCII_ALPHANUMERIC* }
+literal = { string | number }
+
+query = { select_query ~ ch_semi? } // TODO: Semis
+
+select_query = {
+  select_kw ~ selection_cls ~ ( from_kw ~ from_cls )?
+}
+
+// SELECT
+selection_cls = {
+  selection_item ~ selection_item_n*
+}
+
+selection_item_n = {
+  "," ~ selection_item
+}
+
+selection_item = {
+  full_select_var | literal
+}
+
+full_select_var = {
+  ( ( source ~ ch_dot )? ~ ( variable | wildcard ) )
+}
+
+source = { keyword }
+variable = { keyword }
+
+// FROM
+from_cls = {
+  source
+}

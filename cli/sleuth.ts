@@ -4,6 +4,7 @@ import { Contract } from '@ethersproject/contracts';
 import { AbiCoder } from '@ethersproject/abi';
 import { keccak256 } from '@ethersproject/keccak256';
 import { getContractAddress } from '@ethersproject/address';
+import { parse } from '../parser/pkg/parser';
 
 interface Opts {
   network?: string,
@@ -31,7 +32,11 @@ export class Sleuth {
     console.log('Sleuth address', this.sleuthAddr);
   }
 
-  async query(q: string) {
+  query(q: string): string {
+    return parse(q);
+  }
+
+  async querySol(q: string) {
     const input = {
       language: 'Solidity',
       sources: {
