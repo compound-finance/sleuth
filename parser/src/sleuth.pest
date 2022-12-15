@@ -47,7 +47,7 @@ register_query = {
 }
 
 interface_cls = { interface_item ~ interface_item_n* }
-interface_item_n = { "," ~ interface_item }
+interface_item_n = { ch_comma ~ interface_item }
 interface_item = { string }
 
 // SELECT
@@ -67,6 +67,6 @@ source = @{ keyword }
 variable = @{ keyword }
 
 // FROM
-from_cls = {
-  source
-}
+from_cls = { from_0 ~ from_n* }
+from_0 = { source }
+from_n = { ch_comma ~ source }

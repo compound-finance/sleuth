@@ -21,7 +21,7 @@ pub enum Selection<'a> {
 #[derive(Debug, PartialEq)]
 pub struct SelectQuery<'a> {
   pub select: Vec<Selection<'a>>,
-  pub source: Option<&'a str>
+  pub source: Vec<&'a str>
 }
 
 #[derive(Debug, PartialEq)]
@@ -56,7 +56,7 @@ mod tests {
         Selection::Number(55),
         Selection::String("Hello")
       ],
-      source: Some("block")
+      source: vec!["block"]
     });
   }
 

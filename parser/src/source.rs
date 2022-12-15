@@ -112,14 +112,14 @@ pub fn sources_for_query(
     let mut res: Vec<Source> = vec![];
     match query {
         query::Query::Select(select) => {
-            if let Some(name) = select.source {
-                match find_source(name, &all_sources) {
+            for source_name in &select.source {
+                match find_source(source_name, &all_sources) {
                     Some(source) => {
                         res.push(source.clone());
                     }
                     None => Err(format!(
                         "No such relation \"{}\" referenced in FROM clause",
-                        name
+                        source_name
                     ))?,
                 }
             }
@@ -147,7 +147,7 @@ mod tests {
                 source: Some("block"),
                 variable: SelectVar::Var("number"),
             })],
-            source: Some(source.unwrap_or("block")),
+            source: vec![source.unwrap_or("block")],
         })
     }
 

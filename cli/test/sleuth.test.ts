@@ -84,4 +84,12 @@ describe('testing sleuthing', () => {
     `);
     expect(totalSupply.toNumber()).toEqual(160);
   });
+
+  test.only('including call and number', async () => {
+    let sleuth = new Sleuth(provider);
+    sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
+    let q = sleuth.query<{totalSupply: BigNumber}>("SELECT comet.totalSupply, block.number FROM comet, block;");
+    let { totalSupply } = await sleuth.fetch(q);
+    expect(totalSupply.toNumber()).toEqual(22);
+  });
 });

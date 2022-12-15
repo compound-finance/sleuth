@@ -106,7 +106,7 @@ mod tests {
                     source: source.unwrap_or(Some("block")),
                     variable: SelectVar::Var(variable.unwrap_or("number")),
                 })],
-                source: Some("block"),
+                source: vec!["block"],
             }),
         ]
     }

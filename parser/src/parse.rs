@@ -91,21 +91,41 @@ fn parse_selection<'a>(selection: Pair<'a, Rule>) -> Result<Vec<query::Selection
     Ok(res)
 }
 
-fn parse_from<'a>(from: Pair<'a, Rule>) -> Result<&'a str, String> {
+fn expect_one<'a, T>(label: &'static str, from: Pair<'a, Rule>, rules: Vec<Rule>, f: &dyn Fn(Pair<'a, Rule>) -> Result<T, String>) -> Result<T, String> {
+    let mut res: Option<T> = None;
     for pair in from.into_inner() {
-        match pair.as_rule() {
-            Rule::source => {
-                return Ok(pair.as_str());
-            }
-            r => return Err(format!("parse_from::unmatched: {:?}", r)),
+        if rules.contains(&pair.as_rule()) {
+            res = Some(f(pair)?)
+        } else {
+            Err(format!("{}::unmatched: {:?}", label, pair.as_rule()))?
         }
     }
-    Err(String::from("parse_from::exit"))
+    res.ok_or(format!("{}::exit", label))
+}
+
+fn expect_many<'a, T>(label: &'static str, from: Pair<'a, Rule>, rules: Vec<Rule>, f: &dyn Fn(Pair<'a, Rule>) -> Result<T, String>) -> Result<Vec<T>, String> {
+    let mut res: Vec<T> = vec![];
+    for pair in from.into_inner() {
+        if rules.contains(&pair.as_rule()) {
+            res.push(f(pair)?)
+        } else {
+            Err(format!("{}::unmatched: {:?}", label, pair.as_rule()))?
+        }
+    }
+    Ok(res)
+}
+
+fn parse_from_cls<'a>(from_cls: Pair<'a, Rule>) -> Result<Vec<&'a str>, String> {
+    expect_many("from_0", from_cls, vec![Rule::from_0, Rule::from_n], &|from_0n_pair: Pair<'a, Rule>| {
+        expect_one("source", from_0n_pair, vec![Rule::source], &|source_pair: Pair<'a, Rule>| {
+            Ok(source_pair.as_str())
+        })
+    })
 }
 
 fn parse_select_query<'a>(select_query: Pair<'a, Rule>) -> Result<query::SelectQuery<'a>, String> {
     let mut selection: Option<Vec<query::Selection<'a>>> = None;
-    let mut source: Option<&'a str> = None;
+    let mut source: Vec<&'a str> = vec![];
 
     for pair in select_query.into_inner() {
         match pair.as_rule() {
@@ -113,7 +133,7 @@ fn parse_select_query<'a>(select_query: Pair<'a, Rule>) -> Result<query::SelectQ
                 selection = Some(parse_selection(pair)?);
             }
             Rule::from_cls => {
-                source = Some(parse_from(pair)?);
+                source = parse_from_cls(pair)?;
             }
             r => return Err(format!("parse_select_query::unmatched: {:?}", r)),
         }
@@ -219,7 +239,7 @@ pub fn parse_query_cls<'a>(query: &'a str) -> Result<Vec<query::Query<'a>>, Stri
 #[cfg(test)]
 mod tests {
     use crate::parse::parse_query_cls;
-    use crate::query::*;
+    use crate::query::{self, *};
 
     #[test]
     fn simple_query_literal() {
@@ -227,7 +247,7 @@ mod tests {
             parse_query_cls("SELECT 5"),
             Ok(vec![Query::Select(SelectQuery {
                 select: vec![Selection::Number(5)],
-                source: None
+                source: vec![]
             })])
         );
     }
@@ -241,7 +261,7 @@ mod tests {
                     source: Some("blocks"),
                     variable: SelectVar::Var("number")
                 })],
-                source: Some("blocks")
+                source: vec!["blocks"]
             })])
         );
     }
@@ -259,9 +279,19 @@ mod tests {
                     Selection::Number(5),
                     Selection::String("cat"),
                 ],
-                source: Some("blocks")
+                source: vec!["blocks"]
             })])
         );
+    }
+
+    fn register_comet() -> query::Query<'static> {
+        Query::Register(RegisterQuery {
+            source: "comet",
+            address: "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
+            interface: vec![
+                "function totalSupply() returns (uint256)"
+            ]
+        })
     }
 
     #[test]
@@ -274,13 +304,7 @@ mod tests {
             "###
             ),
             Ok(vec![
-                Query::Register(RegisterQuery {
-                    source: "comet",
-                    address: "0xc3d688B66703497DAA19211EEdff47f25384cdc3",
-                    interface: vec![
-                        "function totalSupply() returns (uint256)"
-                    ]
-                }),
+                register_comet(),
                 Query::Select(SelectQuery {
                     select: vec![
                         Selection::Var(FullSelectVar {
@@ -288,7 +312,35 @@ mod tests {
                             variable: SelectVar::Var("totalSupply")
                         })
                     ],
-                    source: Some("comet")
+                    source: vec!["comet"]
+                })
+            ])
+        );
+    }
+
+    #[test]
+    fn query_with_two_froms() {
+        assert_eq!(
+            parse_query_cls(
+                r###"
+                REGISTER CONTRACT comet AT 0xc3d688B66703497DAA19211EEdff47f25384cdc3 WITH INTERFACE ["function totalSupply() returns (uint256)"];
+                SELECT comet.totalSupply, block.number FROM comet, block;
+            "###
+            ),
+            Ok(vec![
+                register_comet(),
+                Query::Select(SelectQuery {
+                    select: vec![
+                        Selection::Var(FullSelectVar {
+                            source: Some("comet"),
+                            variable: SelectVar::Var("totalSupply")
+                        }),
+                        Selection::Var(FullSelectVar {
+                            source: Some("block"),
+                            variable: SelectVar::Var("number")
+                        })
+                    ],
+                    source: vec!["comet", "block"]
                 })
             ])
         );
