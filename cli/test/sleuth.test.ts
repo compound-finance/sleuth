@@ -51,7 +51,7 @@ describe('testing sleuthing', () => {
     let sleuth = new Sleuth(provider);
     sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
     let q = sleuth.query<{totalSupply: BigNumber}>("SELECT comet.totalSupply FROM comet;");
-    let {totalSupply} = await sleuth.fetch(q);
+    let { totalSupply } = await sleuth.fetch(q);
     expect(totalSupply.toNumber()).toEqual(22);
   });
 });

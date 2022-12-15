@@ -12,8 +12,15 @@ fn param_type(p: &ParamType) -> String {
         ParamType::String => String::from("string"),
         ParamType::Array(pp) => format!("{}[]", param_type(&*pp)),
         ParamType::FixedBytes(sz) => format!("bytes{}", sz),
-        ParamType::FixedArray(_, _) => unreachable!(),
-        ParamType::Tuple(_) => unreachable!(),
+        ParamType::FixedArray(pp, sz) => format!("{}[{}]", param_type(&*pp), sz),
+        ParamType::Tuple(els) => {
+            let inner = els
+                .iter()
+                .map(param_type)
+                .collect::<Vec<String>>()
+                .join(",");
+            format!("tuple({})", inner)
+        }
     }
 }
 
@@ -44,7 +51,7 @@ pub fn get_tuple_abi(resolutions: &Vec<Resolution>) -> String {
 
 #[cfg(test)]
 mod tests {
-    use crate::abi::{Resolution, get_tuple_abi};
+    use crate::abi::{get_tuple_abi, Resolution};
     use crate::source::DataSource;
     use ethers::abi::param_type::ParamType;
     use ethers::abi::struct_def::FieldType;

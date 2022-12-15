@@ -1,3 +1,4 @@
+use ethers::utils::hex::ToHex;
 use crate::resolve::Resolution;
 use crate::source::DataSource;
 use ethers::utils::hex;
@@ -90,8 +91,8 @@ pub fn derive_yul_function(resolutions: Vec<Resolution>) -> Result<Vec<String>, 
             DataSource::Call(addr, bytes, _abi) => {
                 let (bytes_len, _chunks) = copy_bytes(&mut tokens, bytes.to_vec(), false);
                 tokens.push(format!(
-                    "pop(call(gas(), {}, 0, free, {}, free, 0))",
-                    addr, bytes_len
+                    "pop(call(gas(), 0x{}, 0, free, {}, free, 0))",
+                    addr.encode_hex::<String>(), bytes_len
                 ));
                 tokens.push(format!("returndatacopy(free, 0, returndatasize())"));
                 tokens.push(String::from("mstore(res, free)"));
@@ -171,9 +172,13 @@ mod tests {
             Ok(vec![
                 String::from("let res := 0x80"),
                 String::from("let free := add(0x80,mul(1,0x20))"),
-                String::from("mstore(res, number())"),
+                String::from("mstore(add(free,0),0x18160ddd00000000000000000000000000000000000000000000000000000000)"),
+                String::from("pop(call(gas(), 0xc3d688b66703497daa19211eedff47f25384cdc3, 0, free, 4, free, 0))"),
+                String::from("returndatacopy(free, 0, returndatasize())"),
+                String::from("mstore(res, free)"),
+                String::from("free := add(free, returndatasize())"),
                 String::from("res := add(res, 0x20)"),
-                String::from("return(0x80,sub(free,0x80))"),
+                String::from("return(0x80,sub(free,0x80))")
             ])
         )
     }
