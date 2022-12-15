@@ -122,6 +122,8 @@ export class Sleuth {
   async fetch<T>(q: Query<T>): Promise<T> {
     let sleuthCtx = new Contract(this.sleuthAddr, ['function query(bytes) public view returns (bytes)'], this.provider);
     let queryResult = await sleuthCtx.query('0x' + q.bytecode);
+    console.log(q.abi);
+    console.log(queryResult);
     return new AbiCoder().decode(q.abi, queryResult) as unknown as T;
   }
 }

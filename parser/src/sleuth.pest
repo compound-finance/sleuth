@@ -14,7 +14,14 @@ ch_semi = _{ ";" }
 ch_dot = _{ "." }
 wildcard = { "*" }
 
-string = { ( "\"" ~ !"\""* ~ "\"" ) | ( "'" ~ !"'"* ~ "'" ) }
+string = ${ "\"" ~ string_inner ~ "\"" }
+string_inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
 number = { ASCII_DIGIT+ }
 keyword = { XID_START ~ ASCII_ALPHANUMERIC* }
 literal = { string | number }
@@ -42,8 +49,8 @@ full_select_var = {
   ( ( source ~ ch_dot )? ~ ( variable | wildcard ) )
 }
 
-source = { keyword }
-variable = { keyword }
+source = @{ keyword }
+variable = @{ keyword }
 
 // FROM
 from_cls = {

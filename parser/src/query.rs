@@ -1,30 +1,54 @@
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum SelectVar<'a> {
   Wildcard,
   Var(&'a str)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct FullSelectVar<'a> {
   pub source: Option<&'a str>,
   pub variable: SelectVar<'a>
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Selection<'a> {
   Var(FullSelectVar<'a>),
   Number(u64),
   String(&'a str)
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct SelectQuery<'a> {
   pub select: Vec<Selection<'a>>,
   pub source: Option<&'a str>
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Query<'a> {
   Select(SelectQuery<'a>)
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::query::*;
+
+  #[test]
+  fn select_query() {
+    let _: Query = Query::Select(SelectQuery {
+      select: vec![
+        Selection::Var(FullSelectVar {
+          source: Some("block"),
+          variable: SelectVar::Wildcard
+        }),
+        Selection::Var(FullSelectVar {
+          source: None,
+          variable: SelectVar::Var("number")
+        }),
+        Selection::Number(55),
+        Selection::String("Hello")
+      ],
+      source: Some("block")
+    });
+  }
 }

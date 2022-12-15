@@ -31,11 +31,19 @@ describe('testing sleuthing', () => {
     expect(Sleuth.query("INSERT INTO users;")).toEqual("55");
   });
 
-  test.only('should parse sleuth', async () => {
+  test('should parse sleuth', async () => {
     let sleuth = new Sleuth(provider);
-    let q = Sleuth.query<{ block: BigNumber }>("SELECT block.number FROM block;");
-    console.log({q});
-    let { block } = await sleuth.fetch(q);
-    expect(block.toNumber()).toEqual("55");
+    let q = Sleuth.query<{ number: BigNumber }>("SELECT block.number FROM block;");
+    let { number } = await sleuth.fetch(q);
+    expect(number.toNumber()).toEqual("55");
+  });
+
+  test.only('should parse sleuth too', async () => {
+    let sleuth = new Sleuth(provider);
+    let q = Sleuth.query<[BigNumber, string, BigNumber]>("SELECT block.number, \"dog\", 22 FROM block;");
+    let [number, animal, age] = await sleuth.fetch(q);
+    expect(number.toNumber()).toEqual(1);
+    expect(animal).toEqual("dog");
+    expect(age.toNumber()).toEqual(22);
   });
 });

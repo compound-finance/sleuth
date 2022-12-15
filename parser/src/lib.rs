@@ -7,6 +7,7 @@ mod parse;
 mod resolve;
 mod abi;
 mod yul;
+mod source;
 
 use wasm_bindgen::prelude::*;
 
@@ -19,9 +20,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 #[wasm_bindgen]
 pub fn parse(query: String) -> Result<String, String> { 
     let query = parse::parse_query(&query)?;
-    // format!("{:?}", query)
-    let resolutions = resolve::resolve(query)?;
-    let tuple = abi::struct_to_tuple(resolve::get_solc_struct(&resolutions));
+    let resolutions = resolve::resolve(&query)?;
+    let tuple = abi::get_tuple_abi(&resolutions);
     let yul = yul::derive_yul(resolutions)?;
 
     Ok(format!("{};{}", tuple, yul))
