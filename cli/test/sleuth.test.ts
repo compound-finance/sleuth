@@ -28,22 +28,30 @@ describe('testing sleuthing', () => {
 
   test('should fail invalid', async () => {
     let sleuth = new Sleuth(provider);
-    expect(Sleuth.query("INSERT INTO users;")).toEqual("55");
+    expect(sleuth.query("INSERT INTO users;")).toEqual("55");
   });
 
   test('should parse sleuth', async () => {
     let sleuth = new Sleuth(provider);
-    let q = Sleuth.query<{ number: BigNumber }>("SELECT block.number FROM block;");
+    let q = sleuth.query<{ number: BigNumber }>("SELECT block.number FROM block;");
     let { number } = await sleuth.fetch(q);
     expect(number.toNumber()).toEqual("55");
   });
 
-  test.only('should parse sleuth too', async () => {
+  test('should parse sleuth too', async () => {
     let sleuth = new Sleuth(provider);
-    let q = Sleuth.query<[BigNumber, string, BigNumber]>("SELECT block.number, \"dog\", 22 FROM block;");
+    let q = sleuth.query<[BigNumber, string, BigNumber]>("SELECT block.number, \"dog\", 22 FROM block;");
     let [number, animal, age] = await sleuth.fetch(q);
     expect(number.toNumber()).toEqual(1);
     expect(animal).toEqual("dog");
     expect(age.toNumber()).toEqual(22);
+  });
+
+  test.only('including a call', async () => {
+    let sleuth = new Sleuth(provider);
+    sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
+    let q = sleuth.query<{totalSupply: BigNumber}>("SELECT comet.totalSupply FROM comet;");
+    let {totalSupply} = await sleuth.fetch(q);
+    expect(totalSupply.toNumber()).toEqual(22);
   });
 });

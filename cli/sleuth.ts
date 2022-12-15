@@ -1,7 +1,7 @@
 const solc = require('solc');
 import { Provider } from '@ethersproject/providers';
 import { Contract } from '@ethersproject/contracts';
-import { AbiCoder, Fragment, ParamType } from '@ethersproject/abi';
+import { AbiCoder, FormatTypes, Fragment, Interface, ParamType } from '@ethersproject/abi';
 import { keccak256 } from '@ethersproject/keccak256';
 import { getContractAddress } from '@ethersproject/address';
 import { parse } from '../parser/pkg/parser';
@@ -24,22 +24,35 @@ interface Query<T> {
   abi: ReadonlyArray<ParamType>
 }
 
+interface Source {
+  name: string,
+  address: string,
+  iface: Interface
+}
+
 export class Sleuth {
   provider: Provider;
   network: string;
   version: number;
   sleuthAddr: string;
+  sources: Source[];
 
   constructor(provider: Provider, opts: Opts = {}) {
     this.provider = provider;
     this.network = opts.network ?? defaultOpts.network;
     this.version = opts.version ?? defaultOpts.version;
     this.sleuthAddr = getContractAddress({ from: sleuthDeployer, nonce: this.version - 1 });
-    console.log('Sleuth address', this.sleuthAddr);
+    this.sources = [];
   }
 
-  static query<T>(q: string): Query<T> {
-    let [tuple, yul] = parse(q).split(';', 2);
+  query<T>(q: string): Query<T> {
+    let registrations = this.sources.map((source) => {
+      let iface = JSON.stringify(source.iface.format(FormatTypes.full));
+      return `REGISTER CONTRACT ${source.name} AT ${source.address} WITH INTERFACE ${iface};`
+    }).join("\n");
+    let fullQuery = `${registrations}${q}`;
+    console.log("Full Query", fullQuery);
+    let [tuple, yul] = parse(fullQuery).split(';', 2);
     console.log("Tuple", tuple, "Yul", yul);
     const input = {
       language: 'Yul',
@@ -117,6 +130,13 @@ export class Sleuth {
       bytecode: b,
       abi: queryAbi.outputs
     };
+  }
+
+  async addSource(name: string, address: string, iface: string[] | Interface) {
+    if (Array.isArray(iface)) {
+      iface = new Interface(iface);
+    }
+    this.sources.push({name, address, iface});
   }
 
   async fetch<T>(q: Query<T>): Promise<T> {

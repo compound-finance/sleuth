@@ -113,9 +113,10 @@ pub fn derive_yul(resolutions: Vec<Resolution>) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use crate::resolve::Resolution;
-    use crate::source::DataSource;
+    use crate::source::{DataSource, DataSource::Call};
     use crate::yul;
     use ethers::abi;
+    use ethers::types::Bytes;
 
     #[test]
     fn pad_zeroes() {
@@ -134,6 +135,35 @@ mod tests {
             name: Some(String::from("block")),
             abi: abi::struct_def::FieldType::Elementary(abi::ParamType::Uint(256)),
             data_source: DataSource::BlockNumber,
+        }];
+
+        assert_eq!(
+            yul::derive_yul_function(resolutions),
+            Ok(vec![
+                String::from("let res := 0x80"),
+                String::from("let free := add(0x80,mul(1,0x20))"),
+                String::from("mstore(res, number())"),
+                String::from("res := add(res, 0x20)"),
+                String::from("return(0x80,sub(free,0x80))"),
+            ])
+        )
+    }
+
+    #[test]
+    fn derive_yul_call() {
+        let resolutions = vec![Resolution {
+            name: Some(String::from("comet")),
+            abi: abi::struct_def::FieldType::Elementary(abi::ParamType::Uint(256)),
+            data_source: Call(
+                ethers::types::H160([
+                    0xc3, 0xd6, 0x88, 0xB6, 0x67, 0x03, 0x49, 0x7D, 0xAA, 0x19, 0x21, 0x1E, 0xEd,
+                    0xff, 0x47, 0xf2, 0x53, 0x84, 0xcd, 0xc3,
+                ]),
+                Bytes::from([0x18, 0x16, 0x0d, 0xdd]),
+                abi::struct_def::FieldType::Elementary(ethers::abi::param_type::ParamType::Tuple(
+                    vec![abi::ParamType::Uint(256)],
+                )),
+            ),
         }];
 
         assert_eq!(

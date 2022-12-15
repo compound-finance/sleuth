@@ -19,8 +19,8 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
 #[wasm_bindgen]
 pub fn parse(query: String) -> Result<String, String> { 
-    let query = parse::parse_query(&query)?;
-    let resolutions = resolve::resolve(&query)?;
+    let query_set = parse::parse_query_cls(&query)?;
+    let resolutions = resolve::resolve(&query_set)?;
     let tuple = abi::get_tuple_abi(&resolutions);
     let yul = yul::derive_yul(resolutions)?;
 
