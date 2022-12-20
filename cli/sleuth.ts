@@ -1,7 +1,6 @@
-const solc = require('solc');
 import { Provider } from '@ethersproject/providers';
 import { Contract } from '@ethersproject/contracts';
-import { AbiCoder, FormatTypes, Fragment, Interface, ParamType } from '@ethersproject/abi';
+import { AbiCoder, FormatTypes, FunctionFragment, Fragment, Interface, ParamType } from '@ethersproject/abi';
 import { keccak256 } from '@ethersproject/keccak256';
 import { getContractAddress } from '@ethersproject/address';
 import { parse } from '../parser/pkg/parser';
@@ -28,6 +27,55 @@ interface Source {
   name: string,
   address: string,
   iface: Interface
+}
+
+interface SolidityQueryOpts {
+  queryFunctionName?: string;
+}
+
+interface SolcInput {
+  language?: string,
+  sources: {
+    [fileName: string]: {
+      content: string
+    }
+  },
+  settings: object
+}
+
+interface SolcContract {
+  evm?: {
+    bytecode?: {
+      object: string
+    }
+  },
+  bytecode?: {
+    object: string
+  },
+  abi: Fragment[]
+}
+
+interface SolcOutput {
+  contracts: {
+    [fileName: string]: {
+      [contractName: string]: SolcContract
+    }
+  },
+  errors?: string[],
+}
+
+function solcCompile(input: SolcInput): SolcOutput {
+  let solc;
+  try {
+    solc = require('solc');
+  } catch (e) {
+    throw new Error(`solc.js yarn dependency not found. Please build with optional dependencies included`);
+  }
+  return JSON.parse(solc.compile(JSON.stringify(input)));
+}
+
+function hexify(v: string): string {
+  return v.startsWith('0x') ? v : `0x${v}`;
 }
 
 export class Sleuth {
@@ -70,7 +118,7 @@ export class Sleuth {
       }
     };
 
-    let result = JSON.parse(solc.compile(JSON.stringify(input)));
+    let result = solcCompile(input);
     console.log(result.contracts['query.yul']);
     if (result.errors && result.errors.length > 0) {
       throw new Error("Compilation Error: " + JSON.stringify(result.errors));
@@ -88,8 +136,50 @@ export class Sleuth {
     };
   }
 
-  static querySol<T>(q: string): Query<T> {
-    const input = {
+  static querySol<T>(q: string | object, opts: SolidityQueryOpts = {}): Query<T> {
+    if (typeof(q) === 'string') {
+      let r;
+      try {
+        // Try to parse as JSON, if that fails, then consider a query
+        r = JSON.parse(q);
+      } catch (e) {
+        // Ignore
+      }
+
+      if (r) {
+        return this.querySolOutput(r, opts);
+      } else {
+        // This must be a source file, try to compile
+        return this.querySolSource(q, opts);
+      }
+
+    } else {
+      // This was passed in as a pre-parsed contract. Or at least, it should have been.
+      return this.querySolOutput(q as SolcContract, opts);
+    }
+  }
+
+  static querySolOutput<T>(c: SolcContract, opts: SolidityQueryOpts = {}): Query<T> {
+    let queryFunctionName = opts.queryFunctionName ?? 'query';
+    let b = c.evm?.bytecode?.object ?? c.bytecode?.object;
+    if (!b) {
+      throw new Error(`Missing (evm.)bytecode.object in contract ${JSON.stringify(c, null, 4)}`);
+    }
+    let abi = c.abi;
+    let queryAbi = abi.find(({type, name}: any) => type === 'function' && name === queryFunctionName);
+    if (!queryAbi) {
+      throw new Error(`Query must include function \`${queryFunctionName}()\``);
+    }
+
+    return {
+      bytecode: b,
+      abi: (queryAbi as FunctionFragment).outputs ?? []
+    };
+  }
+
+  static querySolSource<T>(q: string, opts: SolidityQueryOpts = {}): Query<T> {
+    let fnName = opts.queryFunctionName ?? 'query';
+    let input = {
       language: 'Solidity',
       sources: {
         'query.sol': {
@@ -105,7 +195,7 @@ export class Sleuth {
       }
     };
 
-    let result = JSON.parse(solc.compile(JSON.stringify(input)));
+    let result = solcCompile(input);
     if (result.errors && result.errors.length > 0) {
       throw new Error("Compilation Error: " + JSON.stringify(result.errors));
     }
@@ -119,17 +209,7 @@ export class Sleuth {
     } else if (Object.keys(contract).length > 1) {
       console.warn(`Query contains multiple contracts, using ${Object.keys(contract)[0]}`);
     }
-    let b = c.evm.bytecode.object;
-    let abi = c.abi;
-    let queryAbi = abi.find(({type, name}: any) => type === 'function' && name === 'query');
-    if (!queryAbi) {
-      throw new Error(`Query must include function \`query()\``);
-    }
-
-    return {
-      bytecode: b,
-      abi: queryAbi.outputs
-    };
+    return this.querySolOutput(c, opts);
   }
 
   async addSource(name: string, address: string, iface: string[] | Interface) {
@@ -141,9 +221,19 @@ export class Sleuth {
 
   async fetch<T>(q: Query<T>): Promise<T> {
     let sleuthCtx = new Contract(this.sleuthAddr, ['function query(bytes) public view returns (bytes)'], this.provider);
-    let queryResult = await sleuthCtx.query('0x' + q.bytecode);
+    let queryResult = await sleuthCtx.query(hexify(q.bytecode));
     console.log(q.abi);
     console.log(queryResult);
-    return new AbiCoder().decode(q.abi, queryResult) as unknown as T;
+    let r = new AbiCoder().decode(q.abi, queryResult) as unknown;
+    if (Array.isArray(r) && r.length === 1) {
+      return r[0] as T;
+    } else {
+      return r as T;
+    }
+  }
+
+  async fetchSql<T>(q: string): Promise<T> {
+    let query = this.query<T>(q);
+    return this.fetch<T>(query);
   }
 }

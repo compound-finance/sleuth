@@ -11,10 +11,19 @@ describe('testing sleuthing', () => {
     provider = new JsonRpcProvider('http://127.0.0.1:8599');
   });
 
-  test('should return the block number', async () => {
+  test('should return the block number via compilation', async () => {
     let sleuth = new Sleuth(provider);
     let solidity = await fs.readFile(path.join(__dirname, '../../src/examples/BlockNumber.sol'), 'utf8');
     let res = await sleuth.fetch(Sleuth.querySol<BigNumber>(solidity));
+    expect(res.toNumber()).toBe(1);
+  });
+
+  test('should return the block number via precompile', async () => {
+    let sleuth = new Sleuth(provider);
+    let solidity = await fs.readFile(path.join(__dirname, '../../out/BlockNumber.sol/BlockNumber.json'), 'utf8');
+    console.log({solidity})
+    let res = await sleuth.fetch(Sleuth.querySol<BigNumber>(solidity));
+    console.log("res", res);
     expect(res.toNumber()).toBe(1);
   });
 
@@ -22,20 +31,22 @@ describe('testing sleuthing', () => {
     let sleuth = new Sleuth(provider);
     let solidity = await fs.readFile(path.join(__dirname, '../../src/examples/Pair.sol'), 'utf8');
     let res = await sleuth.fetch(Sleuth.querySol<[BigNumber, string]>(solidity));
+    console.log(res);
     expect(res[0].toNumber()).toBe(55);
     expect(res[1]).toEqual("hello");
   });
 
   test('should fail invalid', async () => {
     let sleuth = new Sleuth(provider);
-    expect(sleuth.query("INSERT INTO users;")).toEqual("55");
+    expect(() => sleuth.query("INSERT INTO users;")).toThrow();
   });
 
   test('should parse sleuth', async () => {
     let sleuth = new Sleuth(provider);
-    let q = sleuth.query<{ number: BigNumber }>("SELECT block.number FROM block;");
-    let { number } = await sleuth.fetch(q);
-    expect(number.toNumber()).toEqual("55");
+    let q = sleuth.query<BigNumber>("SELECT block.number FROM block;");
+    let number = await sleuth.fetch(q);
+    // TODO: Check why named return types aren't working
+    expect(number.toNumber()).toEqual(1);
   });
 
   test('should parse sleuth too', async () => {
@@ -47,11 +58,21 @@ describe('testing sleuthing', () => {
     expect(age.toNumber()).toEqual(22);
   });
 
-  test.only('including a call', async () => {
+  test('including a call', async () => {
     let sleuth = new Sleuth(provider);
     sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
-    let q = sleuth.query<{totalSupply: BigNumber}>("SELECT comet.totalSupply FROM comet;");
-    let { totalSupply } = await sleuth.fetch(q);
-    expect(totalSupply.toNumber()).toEqual(22);
+    let q = sleuth.query<[ BigNumber ]>("SELECT comet.totalSupply FROM comet;");
+    let [ totalSupply ] = await sleuth.fetch(q);
+    // TODO: Check why named return types aren't working
+    expect(totalSupply.toNumber()).toEqual(160);
+  });
+
+  test('fetchSql query', async () => {
+    let sleuth = new Sleuth(provider);
+    let [ totalSupply ] = await sleuth.fetchSql<[ BigNumber ]>(`
+      REGISTER CONTRACT comet AT 0xc3d688B66703497DAA19211EEdff47f25384cdc3 WITH INTERFACE ["function totalSupply() returns (uint256)"];
+      SELECT comet.totalSupply FROM comet;
+    `);
+    expect(totalSupply.toNumber()).toEqual(160);
   });
 });
