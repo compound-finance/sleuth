@@ -1,0 +1,72 @@
+
+main = {
+  SOI
+  ~ query_cls
+  ~ ch_semi?
+  ~ EOI
+}
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT = _{ "/*" ~ (!"*/" ~ ANY)* ~ "*/" }
+
+select_kw = _{ ^"SELECT" }
+register_kw = _{ ^"REGISTER" }
+contract_kw = _{ ^"CONTRACT" }
+from_kw = _{ ^"FROM" }
+with_kw = _{ ^"WITH" }
+interface_kw = _{ ^"INTERFACE" }
+at_kw = _{ ^"AT" }
+ch_semi = _{ ";" }
+ch_dot = _{ "." }
+ch_comma = _{ "," }
+ch_open_bracket = _{ "[" }
+ch_close_bracket = _{ "]" }
+wildcard = { "*" }
+
+string = ${ "\"" ~ string_inner ~ "\"" }
+string_inner = @{ char* }
+char = {
+    !("\"" | "\\") ~ ANY
+    | "\\" ~ ("\"" | "\\" | "/" | "b" | "f" | "n" | "r" | "t")
+    | "\\" ~ ("u" ~ ASCII_HEX_DIGIT{4})
+}
+
+number = @{ ASCII_DIGIT+ }
+keyword = @{ XID_START ~ ASCII_ALPHANUMERIC* }
+literal = { string | number }
+hex = { "0x" ~ ASCII_HEX_DIGIT+ }
+
+query_cls = { query_0 ~ query_n* }
+query_0 = { query }
+query_n = { ch_semi ~ query }
+query = { select_query | register_query }
+
+// REGISTER
+register_query = {
+  register_kw ~ contract_kw ~ keyword ~ at_kw ~ hex ~ ( with_kw ~ interface_kw ~ ch_open_bracket ~ interface_cls ~ ch_close_bracket )?
+}
+
+interface_cls = { interface_item ~ interface_item_n* }
+interface_item_n = { "," ~ interface_item }
+interface_item = { string }
+
+// SELECT
+select_query = {
+  select_kw ~ selection_cls ~ ( from_kw ~ from_cls )?
+}
+
+selection_cls = { selection_item ~ selection_item_n* }
+selection_item_n = { ch_comma ~ selection_item }
+selection_item = { full_select_var | literal }
+
+full_select_var = {
+  ( ( source ~ ch_dot )? ~ ( variable | wildcard ) )
+}
+
+source = @{ keyword }
+variable = @{ keyword }
+
+// FROM
+from_cls = {
+  source
+}

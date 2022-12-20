@@ -1,0 +1,14 @@
+{
+  "name": "parser",
+  "collaborators": [
+    "Geoffrey Hayes <hayesgm@gmail.com>"
+  ],
+  "version": "0.1.0",
+  "files": [
+    "parser_bg.wasm",
+    "parser.js",
+    "parser.d.ts"
+  ],
+  "main": "parser.js",
+  "types": "parser.d.ts"
+}
