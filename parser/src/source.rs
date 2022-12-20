@@ -131,23 +131,21 @@ pub fn sources_for_query(
 
 #[cfg(test)]
 mod tests {
-    use crate::query::{FullSelectVar, Query, RegisterQuery, SelectQuery, SelectVar, Selection};
+    use crate::query::{Query, RegisterQuery, SelectQuery, SelectVar, Selection};
     use crate::source::{
         block_source, find_data_source, find_source, get_address, get_all_sources,
         sources_for_query, DataSource, Source,
     };
-    use ethers::types::H160;
-    use std::collections::HashMap;
     use ethers::abi;
     use ethers::types::Bytes;
+    use ethers::types::H160;
+    use std::collections::HashMap;
 
     fn select_query<'a>(source: Option<&'a str>) -> Query<'a> {
         Query::Select(SelectQuery {
-            select: vec![Selection::Var(FullSelectVar {
-                source: Some("block"),
-                variable: SelectVar::Var("number"),
-            })],
+            select: vec![Selection::Var(SelectVar::Var("number"), Some("block"), vec![])],
             source: vec![source.unwrap_or("block")],
+            bindings: vec![]
         })
     }
 
@@ -162,16 +160,19 @@ mod tests {
     fn comet_source() -> Source {
         Source {
             name: String::from("comet"),
-            mappings: HashMap::from([(String::from("totalSupply"), DataSource::Call(
-                ethers::types::H160([
-                    0xc3, 0xd6, 0x88, 0xB6, 0x67, 0x03, 0x49, 0x7D, 0xAA, 0x19, 0x21, 0x1E, 0xEd,
-                    0xff, 0x47, 0xf2, 0x53, 0x84, 0xcd, 0xc3,
-                ]),
-                Bytes::from([0x18, 0x16, 0x0d, 0xdd]),
-                abi::struct_def::FieldType::Elementary(ethers::abi::param_type::ParamType::Tuple(
-                    vec![abi::ParamType::Uint(256)],
-                )),
-            ))]),
+            mappings: HashMap::from([(
+                String::from("totalSupply"),
+                DataSource::Call(
+                    ethers::types::H160([
+                        0xc3, 0xd6, 0x88, 0xB6, 0x67, 0x03, 0x49, 0x7D, 0xAA, 0x19, 0x21, 0x1E,
+                        0xEd, 0xff, 0x47, 0xf2, 0x53, 0x84, 0xcd, 0xc3,
+                    ]),
+                    Bytes::from([0x18, 0x16, 0x0d, 0xdd]),
+                    abi::struct_def::FieldType::Elementary(
+                        ethers::abi::param_type::ParamType::Tuple(vec![abi::ParamType::Uint(256)]),
+                    ),
+                ),
+            )]),
         }
     }
 

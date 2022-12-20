@@ -46,19 +46,19 @@ pub fn resolve(query_set: &Vec<query::Query>) -> Result<Vec<Resolution>, String>
                 let sources = sources_for_query(query, &all_sources)?;
                 for selection in &select_query.select {
                     match selection {
-                        Selection::Var(fsv) => {
+                        Selection::Var(variable, maybe_source, _args) => {
                             // TODO: Handle vars without listed source
-                            if let Some(source) = fsv.source {
+                            if let Some(source) = maybe_source {
                                 let source = find_source(source, &sources)
                                     .ok_or_else(|| show_missing_source_error(&source, &sources))?;
-                                match fsv.variable {
+                                match variable {
                                     query::SelectVar::Var(v) => {
                                         let data_source =
                                             find_data_source(v, source).ok_or_else(|| {
                                                 show_missing_variable_error(&v, &source)
                                             })?;
                                         resolutions.push(Resolution {
-                                            name: Some(String::from(v)),
+                                            name: Some(v.to_string()),
                                             abi: data_source.abi(),
                                             data_source: data_source.clone(),
                                         });
@@ -77,6 +77,7 @@ pub fn resolve(query_set: &Vec<query::Query>) -> Result<Vec<Resolution>, String>
                             abi: abi::struct_def::FieldType::Elementary(abi::ParamType::String),
                             data_source: DataSource::String(String::from(*s)),
                         }),
+                        &query::Selection::Multi(_) => todo!(),
                     }
                 }
             }
@@ -88,7 +89,7 @@ pub fn resolve(query_set: &Vec<query::Query>) -> Result<Vec<Resolution>, String>
 
 #[cfg(test)]
 mod tests {
-    use crate::query::{FullSelectVar, Query, RegisterQuery, SelectQuery, SelectVar, Selection};
+    use crate::query::{Query, RegisterQuery, SelectQuery, SelectVar, Selection};
     use crate::resolve::{resolve, Resolution};
     use crate::source::DataSource;
     use ethers::abi::param_type::ParamType;
@@ -102,11 +103,13 @@ mod tests {
                 interface: vec!["function totalSupply() returns (uint256)"],
             }),
             Query::Select(SelectQuery {
-                select: vec![Selection::Var(FullSelectVar {
-                    source: source.unwrap_or(Some("block")),
-                    variable: SelectVar::Var(variable.unwrap_or("number")),
-                })],
+                select: vec![Selection::Var(
+                    SelectVar::Var(variable.unwrap_or("number")),
+                    source.unwrap_or(Some("block")),
+                    vec![]
+                )],
                 source: vec!["block"],
+                bindings: vec![],
             }),
         ]
     }

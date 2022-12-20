@@ -85,10 +85,22 @@ describe('testing sleuthing', () => {
     expect(totalSupply.toNumber()).toEqual(160);
   });
 
-  test.only('including call and number', async () => {
+  test('including call and number', async () => {
     let sleuth = new Sleuth(provider);
     sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
     let q = sleuth.query<{totalSupply: BigNumber}>("SELECT comet.totalSupply, block.number FROM comet, block;");
+    let { totalSupply } = await sleuth.fetch(q);
+    expect(totalSupply.toNumber()).toEqual(22);
+  });
+
+  test.only('including call and number', async () => {
+    let sleuth = new Sleuth(provider);
+    sleuth.addSource("comet", "0xc3d688B66703497DAA19211EEdff47f25384cdc3", ["function totalSupply() returns (uint256)"]);
+    let q = sleuth.query<{totalSupply: BigNumber}>(`
+      SELECT comet.balanceOf, comet.userCollateral, comet.totalSupply, block.number
+      FROM comet, block
+      WHERE user = 0x84C3e20985d9E7aEc46F80d2EB52b731D8CC40F8;
+    `);
     let { totalSupply } = await sleuth.fetch(q);
     expect(totalSupply.toNumber()).toEqual(22);
   });

@@ -6,22 +6,18 @@ pub enum SelectVar<'a> {
 }
 
 #[derive(Debug, PartialEq)]
-pub struct FullSelectVar<'a> {
-  pub source: Option<&'a str>,
-  pub variable: SelectVar<'a>
-}
-
-#[derive(Debug, PartialEq)]
 pub enum Selection<'a> {
-  Var(FullSelectVar<'a>),
+  Var(SelectVar<'a>, Option<&'a str>, Vec<Selection<'a>>),
   Number(u64),
-  String(&'a str)
+  String(&'a str),
+  Multi(Vec<Selection<'a>>)
 }
 
 #[derive(Debug, PartialEq)]
 pub struct SelectQuery<'a> {
   pub select: Vec<Selection<'a>>,
-  pub source: Vec<&'a str>
+  pub source: Vec<&'a str>,
+  pub bindings: Vec<(Selection<'a>, Selection<'a>)>
 }
 
 #[derive(Debug, PartialEq)]
@@ -45,18 +41,13 @@ mod tests {
   fn select_query() {
     let _: Query = Query::Select(SelectQuery {
       select: vec![
-        Selection::Var(FullSelectVar {
-          source: Some("block"),
-          variable: SelectVar::Wildcard
-        }),
-        Selection::Var(FullSelectVar {
-          source: None,
-          variable: SelectVar::Var("number")
-        }),
+        Selection::Var(SelectVar::Wildcard, Some("block"), vec![]),
+        Selection::Var(SelectVar::Var("number"), None, vec![]),
         Selection::Number(55),
         Selection::String("Hello")
       ],
-      source: vec!["block"]
+      source: vec!["block"],
+      bindings: vec![]
     });
   }
 

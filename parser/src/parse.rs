@@ -9,7 +9,7 @@ struct SleuthParser;
 
 fn parse_full_select_var<'a>(
     full_select_var: Pair<'a, Rule>,
-) -> Result<query::FullSelectVar<'a>, String> {
+) -> Result<(query::SelectVar<'a>, Option<&'a str>), String> {
     let mut source: Option<&'a str> = None;
 
     for pair in full_select_var.into_inner() {
@@ -18,16 +18,10 @@ fn parse_full_select_var<'a>(
                 source = Some(pair.as_str());
             }
             Rule::variable => {
-                return Ok(query::FullSelectVar {
-                    source,
-                    variable: query::SelectVar::Var(pair.as_str()),
-                });
+                return Ok((query::SelectVar::Var(pair.as_str()), source));
             }
             Rule::wildcard => {
-                return Ok(query::FullSelectVar {
-                    source,
-                    variable: query::SelectVar::Wildcard,
-                });
+                return Ok((query::SelectVar::Wildcard, source));
             }
             r => return Err(format!("parse_full_select_var::unmatched: {:?}", r)),
         }
@@ -61,7 +55,8 @@ fn parse_selection_item<'a>(
     for pair in selection_item.into_inner() {
         match pair.as_rule() {
             Rule::full_select_var => {
-                return Ok(query::Selection::Var(parse_full_select_var(pair)?));
+                let (var, source) = parse_full_select_var(pair)?;
+                return Ok(query::Selection::Var(var, source, vec![]));
             }
             Rule::literal => {
                 return match parse_literal(pair)? {
@@ -142,6 +137,7 @@ fn parse_select_query<'a>(select_query: Pair<'a, Rule>) -> Result<query::SelectQ
     Ok(query::SelectQuery {
         select: selection.unwrap(),
         source,
+        bindings: vec![]
     })
 }
 
@@ -247,7 +243,33 @@ mod tests {
             parse_query_cls("SELECT 5"),
             Ok(vec![Query::Select(SelectQuery {
                 select: vec![Selection::Number(5)],
-                source: vec![]
+                source: vec![],
+                bindings: vec![]
+            })])
+        );
+    }
+
+    #[test]
+    fn simple_query_with_from_and_where() {
+        assert_eq!(
+            parse_query_cls("SELECT user, incr(user) WHERE user IN (1,2,3)"),
+            Ok(vec![Query::Select(SelectQuery {
+                select: vec![
+                    Selection::Var(SelectVar::Var("number"), Some("blocks"), vec![]),
+                ],
+                source: vec!["blocks"],
+                bindings: vec![
+                    (
+                        Selection::Var(SelectVar::Var("user"), None, vec![]),
+                        Selection::Multi(
+                            vec![
+                                Selection::Number(1),
+                                Selection::Number(2),
+                                Selection::Number(3),
+                            ]
+                        )
+                    )
+                ]
             })])
         );
     }
@@ -257,11 +279,9 @@ mod tests {
         assert_eq!(
             parse_query_cls("SELECT blocks.number FROM blocks"),
             Ok(vec![Query::Select(SelectQuery {
-                select: vec![Selection::Var(FullSelectVar {
-                    source: Some("blocks"),
-                    variable: SelectVar::Var("number")
-                })],
-                source: vec!["blocks"]
+                select: vec![Selection::Var(SelectVar::Var("number"), Some("blocks"), vec![])],
+                source: vec!["blocks"],
+                bindings: vec![]
             })])
         );
     }
@@ -272,14 +292,12 @@ mod tests {
             parse_query_cls("SELECT blocks.number, 5, \"cat\" FROM blocks"),
             Ok(vec![Query::Select(SelectQuery {
                 select: vec![
-                    Selection::Var(FullSelectVar {
-                        source: Some("blocks"),
-                        variable: SelectVar::Var("number")
-                    }),
+                    Selection::Var(SelectVar::Var("number"), Some("blocks"), vec![]),
                     Selection::Number(5),
                     Selection::String("cat"),
                 ],
-                source: vec!["blocks"]
+                source: vec!["blocks"],
+                bindings: vec![]
             })])
         );
     }
@@ -307,12 +325,10 @@ mod tests {
                 register_comet(),
                 Query::Select(SelectQuery {
                     select: vec![
-                        Selection::Var(FullSelectVar {
-                            source: Some("comet"),
-                            variable: SelectVar::Var("totalSupply")
-                        })
+                        Selection::Var(SelectVar::Var("totalSupply"), Some("comet"), vec![])
                     ],
-                    source: vec!["comet"]
+                    source: vec!["comet"],
+                    bindings: vec![]
                 })
             ])
         );
@@ -331,16 +347,11 @@ mod tests {
                 register_comet(),
                 Query::Select(SelectQuery {
                     select: vec![
-                        Selection::Var(FullSelectVar {
-                            source: Some("comet"),
-                            variable: SelectVar::Var("totalSupply")
-                        }),
-                        Selection::Var(FullSelectVar {
-                            source: Some("block"),
-                            variable: SelectVar::Var("number")
-                        })
+                        Selection::Var(SelectVar::Var("totalSupply"), Some("comet"), vec![]),
+                        Selection::Var(SelectVar::Var("number"), Some("block"), vec![])
                     ],
-                    source: vec!["comet", "block"]
+                    source: vec!["comet", "block"],
+                    bindings: vec![]
                 })
             ])
         );
