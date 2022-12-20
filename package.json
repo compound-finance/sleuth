@@ -1,6 +1,6 @@
 {
   "name": "@compound-finance/sleuth",
-  "version": "1.0.1-alpha3",
+  "version": "1.0.1-alpha4",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": ["dist/**/*", "parser/pkg/**/*"],

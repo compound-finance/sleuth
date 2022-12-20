@@ -27,6 +27,15 @@ describe('testing sleuthing', () => {
     expect(res.toNumber()).toBe(1);
   });
 
+  test('should handle args', async () => {
+    let sleuth = new Sleuth(provider);
+    let solidity = await fs.readFile(path.join(__dirname, '../../out/Birthday.sol/Birthday.json'), 'utf8');
+    console.log({solidity})
+    let res = await sleuth.fetch(Sleuth.querySol<BigNumber, [number]>(solidity), [5]);
+    console.log("res", res);
+    expect(res.toNumber()).toBe(6);
+  });
+
   test('should return the pair', async () => {
     let sleuth = new Sleuth(provider);
     let solidity = await fs.readFile(path.join(__dirname, '../../src/examples/Pair.sol'), 'utf8');

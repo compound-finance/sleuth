@@ -17,10 +17,10 @@ const defaultOpts = {
 
 const sleuthDeployer = process.env['SLEUTH_DEPLOYER'] ?? '0x84C3e20985d9E7aEc46F80d2EB52b731D8CC40F8';
 
-interface Query<T> {
+interface Query<T, A extends any[] = []> {
   bytecode: string,
   callargs?: string,
-  abi: ReadonlyArray<ParamType>
+  fn: FunctionFragment
 }
 
 interface Source {
@@ -84,6 +84,7 @@ export class Sleuth {
   version: number;
   sleuthAddr: string;
   sources: Source[];
+  coder: AbiCoder;
 
   constructor(provider: Provider, opts: Opts = {}) {
     this.provider = provider;
@@ -91,9 +92,10 @@ export class Sleuth {
     this.version = opts.version ?? defaultOpts.version;
     this.sleuthAddr = getContractAddress({ from: sleuthDeployer, nonce: this.version - 1 });
     this.sources = [];
+    this.coder = new AbiCoder();
   }
 
-  query<T>(q: string): Query<T> {
+  query<T>(q: string): Query<T, []> {
     let registrations = this.sources.map((source) => {
       let iface = JSON.stringify(source.iface.format(FormatTypes.full));
       return `REGISTER CONTRACT ${source.name} AT ${source.address} WITH INTERFACE ${iface};`
@@ -132,11 +134,17 @@ export class Sleuth {
 
     return {
       bytecode: bytecode,
-      abi: ParamType.from(tuple).components
+      fn: FunctionFragment.from({
+        name: 'query',
+        inputs: [],
+        outputs: ParamType.from(tuple).components,
+        stateMutability: 'pure',
+        type: 'function'
+      })
     };
   }
 
-  static querySol<T>(q: string | object, opts: SolidityQueryOpts = {}): Query<T> {
+  static querySol<T, A extends any[] = []>(q: string | object, opts: SolidityQueryOpts = {}): Query<T, A> {
     if (typeof(q) === 'string') {
       let r;
       try {
@@ -159,7 +167,7 @@ export class Sleuth {
     }
   }
 
-  static querySolOutput<T>(c: SolcContract, opts: SolidityQueryOpts = {}): Query<T> {
+  static querySolOutput<T, A extends any[] = []>(c: SolcContract, opts: SolidityQueryOpts = {}): Query<T, A> {
     let queryFunctionName = opts.queryFunctionName ?? 'query';
     let b = c.evm?.bytecode?.object ?? c.bytecode?.object;
     if (!b) {
@@ -173,11 +181,11 @@ export class Sleuth {
 
     return {
       bytecode: b,
-      abi: (queryAbi as FunctionFragment).outputs ?? []
+      fn: queryAbi as FunctionFragment
     };
   }
 
-  static querySolSource<T>(q: string, opts: SolidityQueryOpts = {}): Query<T> {
+  static querySolSource<T, A extends any[] = []>(q: string, opts: SolidityQueryOpts = {}): Query<T, A> {
     let fnName = opts.queryFunctionName ?? 'query';
     let input = {
       language: 'Solidity',
@@ -219,12 +227,16 @@ export class Sleuth {
     this.sources.push({name, address, iface});
   }
 
-  async fetch<T>(q: Query<T>): Promise<T> {
-    let sleuthCtx = new Contract(this.sleuthAddr, ['function query(bytes) public view returns (bytes)'], this.provider);
-    let queryResult = await sleuthCtx.query(hexify(q.bytecode));
-    console.log(q.abi);
+  async fetch<T, A extends any[] = []>(q: Query<T, A>, args?: A): Promise<T> {
+    let sleuthCtx = new Contract(this.sleuthAddr, [
+      'function query(bytes,bytes) public view returns (bytes)'
+    ], this.provider);
+    let iface = new Interface([q.fn]);
+    let argsCoded = iface.encodeFunctionData(q.fn.name, args ?? []);
+    let queryResult = await sleuthCtx.query(hexify(q.bytecode), argsCoded);
+    console.log(q.fn);
     console.log(queryResult);
-    let r = new AbiCoder().decode(q.abi, queryResult) as unknown;
+    let r = this.coder.decode(q.fn.outputs ?? [], queryResult) as unknown;
     if (Array.isArray(r) && r.length === 1) {
       return r[0] as T;
     } else {
@@ -234,6 +246,6 @@ export class Sleuth {
 
   async fetchSql<T>(q: string): Promise<T> {
     let query = this.query<T>(q);
-    return this.fetch<T>(query);
+    return this.fetch<T, []>(query, []);
   }
 }
