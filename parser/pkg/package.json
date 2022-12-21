@@ -7,8 +7,10 @@
   "files": [
     "parser_bg.wasm",
     "parser.js",
+    "parser_bg.js",
     "parser.d.ts"
   ],
-  "main": "parser.js",
-  "types": "parser.d.ts"
+  "module": "parser.js",
+  "types": "parser.d.ts",
+  "sideEffects": false
 }
