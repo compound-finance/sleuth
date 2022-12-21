@@ -3,7 +3,6 @@ import { Contract } from '@ethersproject/contracts';
 import { AbiCoder, FormatTypes, FunctionFragment, Fragment, Interface, ParamType } from '@ethersproject/abi';
 import { keccak256 } from '@ethersproject/keccak256';
 import { getContractAddress } from '@ethersproject/address';
-import { parse } from '../parser/pkg/parser';
 
 interface Opts {
   network?: string,
@@ -96,52 +95,53 @@ export class Sleuth {
   }
 
   query<T>(q: string): Query<T, []> {
-    let registrations = this.sources.map((source) => {
-      let iface = JSON.stringify(source.iface.format(FormatTypes.full));
-      return `REGISTER CONTRACT ${source.name} AT ${source.address} WITH INTERFACE ${iface};`
-    }).join("\n");
-    let fullQuery = `${registrations}${q}`;
-    console.log("Full Query", fullQuery);
-    let [tuple, yul] = parse(fullQuery).split(';', 2);
-    console.log("Tuple", tuple, "Yul", yul);
-    const input = {
-      language: 'Yul',
-      sources: {
-        'query.yul': {
-          content: yul
-        }
-      },
-      settings: {
-        outputSelection: {
-          '*': {
-            '*': ['*']
-          }
-        }
-      }
-    };
+    throw new Error(`Not implemented; awaiting wasm bundling issues.`);
+    // let registrations = this.sources.map((source) => {
+    //   let iface = JSON.stringify(source.iface.format(FormatTypes.full));
+    //   return `REGISTER CONTRACT ${source.name} AT ${source.address} WITH INTERFACE ${iface};`
+    // }).join("\n");
+    // let fullQuery = `${registrations}${q}`;
+    // console.log("Full Query", fullQuery);
+    // let [tuple, yul] = parse(fullQuery).split(';', 2);
+    // console.log("Tuple", tuple, "Yul", yul);
+    // const input = {
+    //   language: 'Yul',
+    //   sources: {
+    //     'query.yul': {
+    //       content: yul
+    //     }
+    //   },
+    //   settings: {
+    //     outputSelection: {
+    //       '*': {
+    //         '*': ['*']
+    //       }
+    //     }
+    //   }
+    // };
 
-    let result = solcCompile(input);
-    console.log(result.contracts['query.yul']);
-    if (result.errors && result.errors.length > 0) {
-      throw new Error("Compilation Error: " + JSON.stringify(result.errors));
-    }
+    // let result = solcCompile(input);
+    // console.log(result.contracts['query.yul']);
+    // if (result.errors && result.errors.length > 0) {
+    //   throw new Error("Compilation Error: " + JSON.stringify(result.errors));
+    // }
     
-    let bytecode = result?.contracts['query.yul']?.Query?.evm?.bytecode?.object;
+    // let bytecode = result?.contracts['query.yul']?.Query?.evm?.bytecode?.object;
 
-    if (!bytecode) {
-      throw new Error(`Missing bytecode from compilation result: ${JSON.stringify(result)}`);
-    }
+    // if (!bytecode) {
+    //   throw new Error(`Missing bytecode from compilation result: ${JSON.stringify(result)}`);
+    // }
 
-    return {
-      bytecode: bytecode,
-      fn: FunctionFragment.from({
-        name: 'query',
-        inputs: [],
-        outputs: ParamType.from(tuple).components,
-        stateMutability: 'pure',
-        type: 'function'
-      })
-    };
+    // return {
+    //   bytecode: bytecode,
+    //   fn: FunctionFragment.from({
+    //     name: 'query',
+    //     inputs: [],
+    //     outputs: ParamType.from(tuple).components,
+    //     stateMutability: 'pure',
+    //     type: 'function'
+    //   })
+    // };
   }
 
   static querySol<T, A extends any[] = []>(q: string | object, opts: SolidityQueryOpts = {}): Query<T, A> {
