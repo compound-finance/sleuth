@@ -88,6 +88,7 @@ pub fn derive_yul_function(resolutions: Vec<Resolution>) -> Result<Vec<String>, 
                 tokens.push(format!("free := add(free, {})", chunks * 32));
                 tokens.push(String::from("res := add(res, 0x20)"));
             }
+            DataSource::Address(_) => todo!(),
             DataSource::Call(addr, bytes, _abi) => {
                 let (bytes_len, _chunks) = copy_bytes(&mut tokens, bytes.to_vec(), false);
                 tokens.push(format!(

@@ -9,6 +9,7 @@ pub enum DataSource {
     BlockNumber,
     Number(u64),
     String(String),
+    Address(String),
     Call(Address, Bytes, abi::struct_def::FieldType),
 }
 
@@ -19,6 +20,7 @@ impl DataSource {
                 abi::struct_def::FieldType::Elementary(abi::ParamType::Uint(256))
             }
             DataSource::String(_) => abi::struct_def::FieldType::Elementary(abi::ParamType::String),
+            DataSource::Address(_) => todo!(),
             DataSource::Call(_, _, abi) => abi.clone(),
         }
     }

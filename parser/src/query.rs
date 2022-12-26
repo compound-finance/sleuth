@@ -10,6 +10,7 @@ pub enum Selection<'a> {
   Var(SelectVar<'a>, Option<&'a str>, Vec<Selection<'a>>),
   Number(u64),
   String(&'a str),
+  Address(&'a str),
   Multi(Vec<Selection<'a>>)
 }
 
@@ -17,7 +18,7 @@ pub enum Selection<'a> {
 pub struct SelectQuery<'a> {
   pub select: Vec<Selection<'a>>,
   pub source: Vec<&'a str>,
-  pub bindings: Vec<(Selection<'a>, Selection<'a>)>
+  pub bindings: Vec<(SelectVar<'a>, Option<&'a str>, Selection<'a>)>
 }
 
 #[derive(Debug, PartialEq)]

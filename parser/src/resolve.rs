@@ -77,6 +77,11 @@ pub fn resolve(query_set: &Vec<query::Query>) -> Result<Vec<Resolution>, String>
                             abi: abi::struct_def::FieldType::Elementary(abi::ParamType::String),
                             data_source: DataSource::String(String::from(*s)),
                         }),
+                        Selection::Address(s) => resolutions.push(Resolution {
+                            name: None,
+                            abi: abi::struct_def::FieldType::Elementary(abi::ParamType::String),
+                            data_source: DataSource::Address(String::from(*s)),
+                        }),
                         &query::Selection::Multi(_) => todo!(),
                     }
                 }

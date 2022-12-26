@@ -25,7 +25,8 @@ ch_open_bracket = _{ "[" }
 ch_close_bracket = _{ "]" }
 ch_open_paren = _{ "(" }
 ch_close_paren = _{ ")" }
-ch_operator = _{ "=" | "<>" | ^"IN" | ^"NOT IN" }
+ch_operator = _{ "=" | "<>" }
+ch_multi_operator = _{ ^"IN" | ^"NOT IN" }
 wildcard = { "*" }
 
 string = ${ "\"" ~ string_inner ~ "\"" }
@@ -38,9 +39,15 @@ char = {
 
 number = @{ ASCII_DIGIT+ }
 keyword = @{ XID_START ~ ASCII_ALPHANUMERIC* }
-literal = { string | number }
-list_literal { ch_open_paren ~ literal ~ ch_close_paren }
+literal = { string | number | address }
+address = { "0x" ~ ASCII_HEX_DIGIT{40} }
 hex = { "0x" ~ ASCII_HEX_DIGIT+ }
+
+list_literal = { ch_open_paren ~ literal_cls ~ ch_close_paren }
+
+literal_cls = _{ literal_0 ~ literal_n* }
+literal_0 = _{ literal }
+literal_n = _{ ch_comma ~ literal }
 
 query_cls = { query_0 ~ query_n* }
 query_0 = { query }
@@ -49,7 +56,7 @@ query = { select_query | register_query }
 
 // REGISTER
 register_query = {
-  register_kw ~ contract_kw ~ keyword ~ at_kw ~ hex ~ ( with_kw ~ interface_kw ~ ch_open_bracket ~ interface_cls ~ ch_close_bracket )?
+  register_kw ~ contract_kw ~ keyword ~ at_kw ~ address ~ ( with_kw ~ interface_kw ~ ch_open_bracket ~ interface_cls ~ ch_close_bracket )?
 }
 
 interface_cls = { interface_item ~ interface_item_n* }
@@ -63,11 +70,14 @@ select_query = {
 
 selection_cls = { selection_item ~ selection_item_n* }
 selection_item_n = { ch_comma ~ selection_item }
-selection_item = { full_select_var | literal | list_literal }
+selection_item = { full_select_var | literal }
+multi_selection_item = { list_literal }
 
 full_select_var = {
-  ( ( source ~ ch_dot )? ~ ( variable | wildcard ) ~ ( "(" ~ full_select_var* ~ ")" )? )
+  ( ( source ~ ch_dot )? ~ ( variable | wildcard ) ~ params? )
 }
+
+params = { ch_open_paren ~ selection_cls? ~ ch_close_paren }
 
 source = @{ keyword }
 variable = @{ keyword }
@@ -83,4 +93,11 @@ where_0 = { binding }
 where_n = { and_kw ~ binding }
 
 // BINDING
-binding = { full_select_var ~ ch_operator ~ selection_item }
+binding = {
+  full_select_var
+  ~ ( single_binding_target | multi_binding_target )
+}
+
+single_binding_target = { ch_operator ~ selection_item }
+multi_binding_target = { ch_multi_operator ~ multi_selection_item }
+
