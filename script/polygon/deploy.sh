@@ -26,3 +26,4 @@ forge create \
   $wallet_args \
   $@ \
   src/Sleuth.sol:Sleuth
+s

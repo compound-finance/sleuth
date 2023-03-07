@@ -1,6 +1,7 @@
-name: Deploy Sleuth [Mainnet]
+name: Deploy Sleuth [Goerli]
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       deployer_address:
@@ -15,13 +16,14 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Deploy Sleuth [Mainnet]
+    name: Deploy Sleuth [Goerli]
     runs-on: ubuntu-latest
     steps:
       - name: Start Seacrest
         uses: hayesgm/seacrest@v1
         with:
-          ethereum_url: "${{ secrets.ETH_MAINNET_URL }}"
+          ethereum_url: "${{ secrets.ETH_GOERLI_URL }}"
+          requested_network: 5
 
       - uses: actions/checkout@v3
         with:
@@ -37,9 +39,9 @@ jobs:
           forge --version
           forge build --sizes
 
-      - name: Forge Deploy Sleuth [Mainnet]
+      - name: Forge Deploy Sleuth [Goerli]
         run: script/ethereum/deploy.sh
         env:
-          ETHERSCAN_API_KEY: "${{ secrets.ETHERSCAN_API_KEY }}"
+          GOERLI_API_KEY: "${{ secrets.GOERLI_API_KEY }}"
           ETH_FROM: "${{ inputs.deployer_address }}"
           RPC_URL: "http://localhost:8585"
