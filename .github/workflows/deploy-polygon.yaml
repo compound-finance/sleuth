@@ -23,6 +23,7 @@ jobs:
         uses: hayesgm/seacrest@v1
         with:
           ethereum_url: "${{ secrets.ETH_POLYGON_URL }}"
+          requested_network: 137
 
       - uses: actions/checkout@v3
         with:
