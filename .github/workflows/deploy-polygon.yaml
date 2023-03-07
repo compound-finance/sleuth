@@ -1,6 +1,7 @@
 name: Deploy Sleuth [Polygon]
 
 on:
+  pull_request:
   workflow_dispatch:
     inputs:
       deployer_address:
