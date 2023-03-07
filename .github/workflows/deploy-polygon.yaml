@@ -1,0 +1,45 @@
+name: Deploy Sleuth [Polygon]
+
+on:
+  workflow_dispatch:
+    inputs:
+      deployer_address:
+        description: WalletConnect address to deploy from
+        required: true
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Deploy Sleuth [Polygon]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Seacrest
+        uses: hayesgm/seacrest@v1
+        with:
+          ethereum_url: "${{ secrets.ETH_POLYGON_URL }}"
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - name: Forge Deploy Sleuth [Polygon]
+        run: script/polygon/deploy.sh
+        env:
+          POLYGON_API_KEY: "${{ secrets.POLYGON_API_KEY }}"
+          ETH_FROM: "${{ inputs.deployer_address }}"
+          RPC_URL: "http://localhost:8585"
