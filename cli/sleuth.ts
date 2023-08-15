@@ -7,7 +7,8 @@ import { parse } from '../parser/pkg/parser';
 
 interface Opts {
   network?: string,
-  version?: number
+  version?: number,
+  solcCompileFn?: (jsonInput:string) => string
 };
 
 const defaultOpts = {
@@ -64,14 +65,19 @@ interface SolcOutput {
   errors?: string[],
 }
 
-function solcCompile(input: SolcInput): SolcOutput {
-  let solc;
-  try {
-    solc = require('solc');
-  } catch (e) {
-    throw new Error(`solc.js yarn dependency not found. Please build with optional dependencies included`);
+function solcCompile(
+  input: SolcInput,
+  compileFn: ((input: string) => string) | undefined
+): SolcOutput {
+  if (compileFn === undefined) {
+    throw new Error(`This option requires solc.compile() to be set in Opts or passed into as an arg to querySol(). Please ensure you are assigning solc.compile() and try again.`);
   }
-  return JSON.parse(solc.compile(JSON.stringify(input)));
+
+  const inputJson = JSON.stringify(input);
+  if (inputJson == undefined) {
+    throw new Error(`Input not able to be compiled: ${input}`);
+  }
+  return JSON.parse(compileFn(inputJson));
 }
 
 function hexify(v: string): string {
@@ -85,19 +91,24 @@ export class Sleuth {
   sleuthAddr: string;
   sources: Source[];
   coder: AbiCoder;
+  solcCompileFn: ((jsonInput: string) => string) | undefined;
 
   constructor(provider: Provider, opts: Opts = {}) {
     this.provider = provider;
     this.network = opts.network ?? defaultOpts.network;
     this.version = opts.version ?? defaultOpts.version;
-    this.sleuthAddr = getContractAddress({ from: sleuthDeployer, nonce: this.version - 1 });
+    this.sleuthAddr = getContractAddress({
+      from: sleuthDeployer,
+      nonce: this.version - 1,
+    });
     this.sources = [];
     this.coder = new AbiCoder();
+    this.solcCompileFn = opts.solcCompileFn;
   }
 
   query<T>(q: string): Query<T, []> {
     let registrations = this.sources.map((source) => {
-      let iface = JSON.stringify(source.iface.format(FormatTypes.full));
+        let iface = JSON.stringify(source.iface.format(FormatTypes.full));
       return `REGISTER CONTRACT ${source.name} AT ${source.address} WITH INTERFACE ${iface};`
     }).join("\n");
     let fullQuery = `${registrations}${q}`;
@@ -120,12 +131,12 @@ export class Sleuth {
       }
     };
 
-    let result = solcCompile(input);
+    let result = solcCompile(input, this.solcCompileFn);
     console.log(result.contracts['query.yul']);
     if (result.errors && result.errors.length > 0) {
       throw new Error("Compilation Error: " + JSON.stringify(result.errors));
     }
-    
+
     let bytecode = result?.contracts['query.yul']?.Query?.evm?.bytecode?.object;
 
     if (!bytecode) {
@@ -144,8 +155,12 @@ export class Sleuth {
     };
   }
 
-  static querySol<T, A extends any[] = []>(q: string | object, opts: SolidityQueryOpts = {}): Query<T, A> {
-    if (typeof(q) === 'string') {
+  static querySol<T, A extends any[] = []>(
+    q: string | object,
+    opts: SolidityQueryOpts = {},
+    solcCompileFn: ((jsonInput: string) => string) | undefined
+  ): Query<T, A> {
+    if (typeof q === 'string') {
       let r;
       try {
         // Try to parse as JSON, if that fails, then consider a query
@@ -158,16 +173,18 @@ export class Sleuth {
         return this.querySolOutput(r, opts);
       } else {
         // This must be a source file, try to compile
-        return this.querySolSource(q, opts);
+        return this.querySolSource(q, opts, solcCompileFn);
       }
-
     } else {
       // This was passed in as a pre-parsed contract. Or at least, it should have been.
       return this.querySolOutput(q as SolcContract, opts);
     }
   }
 
-  static querySolOutput<T, A extends any[] = []>(c: SolcContract, opts: SolidityQueryOpts = {}): Query<T, A> {
+  static querySolOutput<T, A extends any[] = []>(
+    c: SolcContract,
+    opts: SolidityQueryOpts = {}
+  ): Query<T, A> {
     let queryFunctionName = opts.queryFunctionName ?? 'query';
     let b = c.evm?.bytecode?.object ?? c.bytecode?.object;
     if (!b) {
@@ -185,7 +202,11 @@ export class Sleuth {
     };
   }
 
-  static querySolSource<T, A extends any[] = []>(q: string, opts: SolidityQueryOpts = {}): Query<T, A> {
+  static querySolSource<T, A extends any[] = []>(
+    q: string,
+    opts: SolidityQueryOpts = {},
+    solcCompileFn: ((jsonInput: string) => string) | undefined
+  ): Query<T, A> {
     let fnName = opts.queryFunctionName ?? 'query';
     let input = {
       language: 'Solidity',
@@ -203,7 +224,7 @@ export class Sleuth {
       }
     };
 
-    let result = solcCompile(input);
+    let result = solcCompile(input, solcCompileFn);
     if (result.errors && result.errors.length > 0) {
       throw new Error("Compilation Error: " + JSON.stringify(result.errors));
     }
@@ -224,7 +245,7 @@ export class Sleuth {
     if (Array.isArray(iface)) {
       iface = new Interface(iface);
     }
-    this.sources.push({name, address, iface});
+    this.sources.push({ name, address, iface });
   }
 
   async fetch<T, A extends any[] = []>(q: Query<T, A>, args?: A): Promise<T> {

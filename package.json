@@ -3,7 +3,10 @@
   "version": "1.0.1-alpha4",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "files": ["dist/**/*", "parser/pkg/**/*"],
+  "files": [
+    "dist/**/*",
+    "parser/pkg/**/*"
+  ],
   "repository": "https://github.com/compound-finance/sleuth",
   "author": "Geoffrey Hayes <hayesgm@gmail.com>",
   "license": "MIT",
@@ -20,9 +23,8 @@
   },
   "dependencies": {
     "@ethersproject/contracts": "^5.7.0",
-    "@ethersproject/providers": "^5.7.2"
+    "@ethersproject/providers": "^5.7.2",
+    "solc": "^0.8.21"
   },
-  "optionalDependencies": {
-    "solc": "^0.8.17"
-  }
+  "optionalDependencies": {}
 }
