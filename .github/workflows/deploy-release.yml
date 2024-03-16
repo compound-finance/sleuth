@@ -43,8 +43,8 @@ jobs:
         run: |
           export RPC_URL=$(echo $deployer_config | jq -r ".$network.rpc_url")
           export DEPLOYER_PK=$(echo $deployer_config | jq -r ".$network.deployer_pk")
-          script/deploy-release.sh $tag
+          script/deploy-release.sh $release
         env:
           deployer_config: ${{ secrets.deployer_config }}
           network: ${{ inputs.network }}
-          tag: ${{ inputs.tag }}
+          release: ${{ inputs.release }}
