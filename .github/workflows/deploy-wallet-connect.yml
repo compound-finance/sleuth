@@ -1,4 +1,4 @@
-name: Deploy Sleuth [Mainnet]
+name: Deploy Sleuth [Mainnet - WalletConnect]
 
 on:
   workflow_dispatch:

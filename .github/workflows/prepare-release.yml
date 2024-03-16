@@ -34,10 +34,12 @@ jobs:
 
       - name: Prepare Release
         run: |
+          export RPC_URL=$(echo $deployer_config | jq ".$network.rpc_url")
+          export CODE_JAR=$(echo $deployer_config | jq ".$network.code_jar")
           script/prepare-release.sh
         env:
-          CODE_JAR: ${{ vars.CODE_JAR }}
-          RPC_URL: ${{ vars.SEPOLIA_RPC_URL }}
+          deployer_config: ${{ secrets.deployer_config }}
+          network: sepolia
 
       - uses: ncipollo/release-action@v1
         with:

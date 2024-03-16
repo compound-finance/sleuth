@@ -1,0 +1,49 @@
+name: Deploy Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release:
+        name: release
+        description: Release tag (e.g. v0.0.1)
+
+      network:
+        name: network
+        options:
+          - mainnet
+          - sepolia
+          - base
+          - base_sepolia
+
+env:
+  FOUNDRY_PROFILE: ci
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Deploy Release
+        run: |
+          export RPC_URL=$(echo $deployer_config | jq -r ".$network.rpc_url")
+          export DEPLOYER_PK=$(echo $deployer_config | jq -r ".$network.deployer_pk")
+          script/deploy-release.sh $tag
+        env:
+          deployer_config: ${{ secrets.deployer_config }}
+          network: sepolia
+          tag: v0.0.1
