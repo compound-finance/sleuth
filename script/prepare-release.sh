@@ -35,6 +35,7 @@ if [ -z "$body" ]; then
 fi
 
 sleuth_address="$(forge script --rpc-url="$RPC_URL" --json --silent script/Sleuth.s.sol:Prepare | tee | jq -r '.returns."0".value')"
+forge verify-contract --show-standard-json-input 0x0000000000000000000000000000000000000000 src/Sleuth.:Sleuth > release/sleuth-verify.json
 
 echo "title=$title"
 echo "body=$body"

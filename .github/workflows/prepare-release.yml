@@ -43,6 +43,6 @@ jobs:
 
       - uses: ncipollo/release-action@v1
         with:
-          artifacts: "release/Sleuth.json,release/Sleuth.sol,release/contracts.json,release/sleuth@*"
+          artifacts: "release/Sleuth.json,release/Sleuth.sol,release/contracts.json,release/sleuth-verify.json,release/sleuth@*"
           bodyFile: "release/RELEASE.md"
           allowUpdates: true
