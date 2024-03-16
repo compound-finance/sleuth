@@ -1,6 +1,8 @@
 # Compiler files
 cache/
 out/
+release/
+.release-tmp/
 
 # Ignores development broadcast logs
 !/broadcast
