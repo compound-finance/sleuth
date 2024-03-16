@@ -30,7 +30,7 @@ contract Deploy is Script {
     function setUp() public {}
 
     function run() public returns (address) {
-        bytes memory sleuthCreationCode = vm.getCode("release/Sleuth.json");
+        bytes memory sleuthCreationCode = vm.getCode("./.release-tmp/Sleuth.json");
         CodeJar codeJar = CodeJar(vm.envAddress("CODE_JAR"));
         address expectedSleuthAddress = vm.envAddress("SLEUTH_ADDRESS");
         address sleuthAddress = codeJar.saveCode(sleuthCreationCode);
