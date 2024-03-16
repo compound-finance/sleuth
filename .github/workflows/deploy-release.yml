@@ -9,6 +9,7 @@ on:
 
       network:
         name: network
+        type: choice
         options:
           - mainnet
           - sepolia
