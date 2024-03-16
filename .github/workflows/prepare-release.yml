@@ -1,0 +1,48 @@
+name: Prepare Release
+
+on:
+  push:
+    tags:
+    - '*'
+
+env:
+  FOUNDRY_PROFILE: ci
+
+permissions:
+  contents: write
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Foundry project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge build
+
+      - name: Prepare Release
+        run: |
+          export RPC_URL=$(echo $deployer_config | jq ".$network.rpc_url")
+          export CODE_JAR=$(echo $deployer_config | jq ".$network.code_jar")
+          script/prepare-release.sh
+        env:
+          deployer_config: ${{ secrets.deployer_config }}
+          network: sepolia
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "release/Sleuth.json,release/Sleuth.sol,release/contracts.json,release/sleuth@*"
+          bodyFile: "release/RELEASE.md"
+          allowUpdates: true
