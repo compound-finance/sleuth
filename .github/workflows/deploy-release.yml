@@ -47,4 +47,4 @@ jobs:
         env:
           deployer_config: ${{ secrets.deployer_config }}
           network: ${{ inputs.network }}
-          tag: ${{ inputs.network }}
+          tag: ${{ inputs.tag }}
