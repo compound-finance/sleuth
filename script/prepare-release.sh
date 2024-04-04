@@ -34,7 +34,7 @@ if [ -z "$body" ]; then
   exit 1
 fi
 
-sleuth_address="$(forge script --rpc-url="$RPC_URL" --json --silent script/Sleuth.s.sol:Prepare | tee | jq -r '.returns."0".value')"
+sleuth_address="$(forge script --rpc-url=$RPC_URL --json --silent script/Sleuth.s.sol:Prepare | tee | jq -r '.returns."0".value')"
 
 echo "title=$title"
 echo "body=$body"
