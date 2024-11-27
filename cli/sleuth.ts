@@ -7,7 +7,8 @@ import { parse } from '../parser/pkg/parser';
 
 interface Opts {
   network?: string,
-  version?: number
+  version?: number,
+  contractAddr?: string
 };
 
 const defaultOpts = {
@@ -90,7 +91,7 @@ export class Sleuth {
     this.provider = provider;
     this.network = opts.network ?? defaultOpts.network;
     this.version = opts.version ?? defaultOpts.version;
-    this.sleuthAddr = getContractAddress({ from: sleuthDeployer, nonce: this.version - 1 });
+    this.sleuthAddr = opts.contractAddr ?? getContractAddress({ from: sleuthDeployer, nonce: this.version - 1 });
     this.sources = [];
     this.coder = new AbiCoder();
   }
