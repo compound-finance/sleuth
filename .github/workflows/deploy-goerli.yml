@@ -1,0 +1,47 @@
+name: Deploy Sleuth [Goerli]
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      deployer_address:
+        description: WalletConnect address to deploy from
+        required: true
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  check:
+    strategy:
+      fail-fast: true
+
+    name: Deploy Sleuth [Goerli]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Seacrest
+        uses: hayesgm/seacrest@v1
+        with:
+          ethereum_url: "${{ secrets.ETH_GOERLI_URL }}"
+          requested_network: 5
+
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Run Forge build
+        run: |
+          forge --version
+          forge build --sizes
+
+      - name: Forge Deploy Sleuth [Goerli]
+        run: script/ethereum/deploy.sh
+        env:
+          GOERLI_API_KEY: "${{ secrets.GOERLI_API_KEY }}"
+          ETH_FROM: "${{ inputs.deployer_address }}"
+          RPC_URL: "http://localhost:8585"
