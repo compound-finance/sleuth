@@ -3,7 +3,7 @@
 set -exo pipefail
 
 if [ -n "$ETHEREUM_PK" ]; then
-  wallet_args="--private-key $ETHEREUM_PK"
+  wallet_args="--private-key $ETHEREUM_PK --broadcast"
 else
   wallet_args="--unlocked"
 fi
