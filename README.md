@@ -101,6 +101,21 @@ contract SimpleQuery {
 `);
 ```
 
+## Deploying the Sleuth contract on a network
+
+To deploy sleuth run the script under `script/mainnet/deploy.sh`, making sure to set the variables `ETHEREUM_PK` and `RPC_URL` (and optionally `ETHERSCAN_API_KEY`)
+
+```sh
+ETHEREUM_PK=xxx RPC_URL=yyy ./deploy.sh
+```
+
+If you run into an `error code -32000: invalid opcode: PUSH0` error, the network may not support the `PUSH0` opcode. Try adding the following to `foundry.toml` to deploy on an older Ethereum fork:
+
+```toml
+evm_version = "london"
+solc = "0.8.23" // optional, to pin solc to a specific version
+```
+
 ## Future Considerations
 
 Instead of having users build solidity files, it might be nice to build a proper query language. This could be SQL-like or ORM-style or anything that compiles to say Yul (the intermediate representation used by Solidity). We could then abstract the interface to something interesting, such as:
