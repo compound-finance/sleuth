@@ -17,7 +17,7 @@ contract Prepare is Script {
         console.log("Chain ID:", block.chainid);
         console.logBytes(address(codeJar).code);
 
-        address sleuthAddress = codeJar.saveCode(type(Sleuth).creationCode);
+        address sleuthAddress = codeJar.saveCode(type(MorphoQuery).creationCode);
 
         console.log("Sleuth Address:", sleuthAddress);
 

@@ -1,45 +1,91 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.23;
 
-contract Sleuth {
-    error DeploymentError();
+type Id is bytes32;
 
-    function query(bytes calldata sleuthQuery) external returns (bytes memory) {
-        return queryInternal(sleuthQuery, abi.encodeWithSignature("query()"));
-    }
+interface Morpho {
+  struct Market {
+      uint128 totalSupplyAssets;
+      uint128 totalSupplyShares;
+      uint128 totalBorrowAssets;
+      uint128 totalBorrowShares;
+      uint128 lastUpdate;
+      uint128 fee;
+  }
 
-    function query(bytes calldata sleuthQuery, bytes memory calldata_) external returns (bytes memory) {
-        return queryInternal(sleuthQuery, calldata_);
-    }
+  struct MarketParams {
+    address loanToken;
+    address collateralToken;
+    address oracle;
+    address irm;
+    uint256 lltv;
+  }
 
-    function queryInternal(bytes memory sleuthQuery, bytes memory calldata_) internal returns (bytes memory) {
-        address sleuthContract;
-        assembly {
-            sleuthContract := create(0, add(sleuthQuery, 0x20), mload(sleuthQuery))
-        }
-        if (sleuthContract == address(0)) {
-            revert DeploymentError();
-        }
+  function idToMarketParams(Id id) external view returns (address loanToken, address collateralToken, address oracle, address irm, uint256 lltv);
 
-        bool success;
-        uint256 retSize;
+  function market(Id id) external view
+        returns (
+            uint128 totalSupplyAssets,
+            uint128 totalSupplyShares,
+            uint128 totalBorrowAssets,
+            uint128 totalBorrowShares,
+            uint128 lastUpdate,
+            uint128 fee
+        );
 
-        assembly {
-            success := call(gas(), sleuthContract, 0, add(calldata_, 0x20), mload(calldata_), 0, 0)
-            retSize := returndatasize()
-        }
+  function position(Id id, address user) external view returns (uint256 supplyShares, uint128 borrowShares, uint128 collateral);
+}
 
-        bytes memory sleuthResult = new bytes(retSize);
-        assembly {
-            returndatacopy(add(sleuthResult, 0x20), 0x00, retSize)
-        }
+interface MorphoVault {
+  function asset() external view returns (address);
+}
 
-        if (!success) {
-            assembly {
-                revert(add(sleuthResult, 0x20), retSize)
-            }
-        }
 
-        return sleuthResult;
-    }
+interface ERC20 {
+  function allowance(address owner, address spender) external view returns (uint);
+
+  function balanceOf(address owner) external view returns (uint);
+
+  function decimals() external view returns (uint);
+
+  function name() external view returns (string memory);
+
+  function symbol() external view returns (string memory);
+}
+
+contract MorphoQuery {
+
+  struct BaseAssetWithAllowance {
+    address asset;
+    uint decimals;
+    string name;
+    //uint price; Where does price come from in Morpho?
+    string symbol;
+    uint allowance;
+  }
+
+  function query(MorphoVault morphoVault, Id [] memory marketIds, address baseTokenUsdFeed, address payable account) public view returns (BaseAssetWithAllowance memory) {
+    address baseAsset = morphoVault.asset();
+
+    //TODO: Base asset as no oracle from Base to USD but we really need one likely
+    //      only Morpho collateral tokens have prices and that is in the base (loan)
+    //      token terms. In order to support Morpho markets we need an oracle that goes
+    //      from base (loan) token to USD, chainlink is probably fine here?
+
+    BaseAssetWithAllowance memory baseAssetWithAllowance = BaseAssetWithAllowance({
+      asset: baseAsset,
+      symbol: ERC20(baseAsset).symbol(),
+      decimals: ERC20(baseAsset).decimals(),
+      name: ERC20(baseAsset).name(),
+      allowance: ERC20(baseAsset).allowance(account, address(morphoVault))
+    });
+
+    //TODO: We should accept a list of Morpho marketIds here that we can use to
+    //      query each individual vaultMarket for data and then return it
+    //
+    //      As part of the vault market, we should reutrn wallet balance, collateral supply balance
+    //      allowance, price (priceUSD?)
+
+    return baseAssetWithAllowance;
+  }
 }
